@@ -1,3 +1,4 @@
+use crate::ai::AiProvider;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -33,6 +34,14 @@ pub enum Commands {
         /// Don't show preview, just output
         #[arg(short, long)]
         quiet: bool,
+
+        /// AI provider to use (default: chutes)
+        #[arg(short, long, value_enum, default_value = "chutes")]
+        ai_provider: AiProvider,
+
+        /// API key for the AI provider (can also use CHUTES_API_KEY env var)
+        #[arg(long)]
+        api_key: Option<String>,
     },
 
     /// Build a package

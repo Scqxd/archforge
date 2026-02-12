@@ -1,11 +1,13 @@
 //! ArchForge - AI-powered TUI for PKGBUILD generation and AUR management
 
+pub mod ai;
 pub mod cli;
 pub mod config;
 pub mod error;
 #[cfg(feature = "tui")]
 pub mod tui;
 
+pub use ai::{AiProvider, ChutesClient};
 pub use cli::Cli;
 pub use config::Config;
 pub use error::{ArchforgeError, Result};
