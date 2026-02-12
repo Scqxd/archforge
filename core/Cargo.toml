@@ -1,0 +1,32 @@
+[package]
+name = "archforge-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "AI/LLM integration for ArchForge"
+
+[dependencies]
+# Workspace deps
+anyhow.workspace = true
+tokio.workspace = true
+serde.workspace = true
+tracing.workspace = true
+
+# LLM inference
+candle-core = "0.4"
+candle-nn = "0.4"
+candle-transformers = "0.4"
+tokenizers = "0.15"
+
+# HTTP client for model downloads
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Async utilities
+futures = "0.3"
+async-trait.workspace = true
+
+# Threading
+rayon = "1.8"
+
+[dev-dependencies]
+tempfile.workspace = true

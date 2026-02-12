@@ -1,0 +1,39 @@
+[package]
+name = "archforge-deploy"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Deployment agents for AUR, Docker, Flatpak, and Nix"
+
+[dependencies]
+# Workspace deps
+anyhow.workspace = true
+tokio.workspace = true
+serde.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "multipart", "blocking"] }
+
+# VCS
+git2 = "0.18"
+
+# Archive handling
+tar = "0.4"
+xz2 = "0.1"
+
+# Container tools
+nix = { version = "0.28", features = ["fs"] }
+libc = "0.2"
+
+# Async utilities
+async-trait.workspace = true
+
+# Utilities
+dirs.workspace = true
+walkdir = "2.4"
+
+[dev-dependencies]
+tempfile.workspace = true
+assert_cmd = "2.0"

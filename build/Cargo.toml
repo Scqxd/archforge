@@ -1,0 +1,33 @@
+[package]
+name = "archforge-build"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Build engine and PKGBUILD parsing for ArchForge"
+
+[dependencies]
+# Workspace deps
+anyhow.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+futures.workspace = true
+dialoguer = "0.11"
+indicatif = "0.17"
+
+# Parsing
+nom = { version = "7", features = ["alloc"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+
+# Utilities
+dirs.workspace = true
+console = "0.15"
+which = "4.4"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile.workspace = true

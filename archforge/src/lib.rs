@@ -1,0 +1,17 @@
+//! ArchForge - AI-powered TUI for PKGBUILD generation and AUR management
+
+pub mod cli;
+pub mod config;
+pub mod error;
+#[cfg(feature = "tui")]
+pub mod tui;
+
+pub use cli::Cli;
+pub use config::Config;
+pub use error::{ArchforgeError, Result};
+
+/// Version of ArchForge
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Homepage
+pub const HOMEPAGE: &str = "https://github.com/archforge/archforge";
