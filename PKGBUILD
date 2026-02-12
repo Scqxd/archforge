@@ -1,74 +1,50 @@
-# Maintainer: ArchForge Team <archforge@example.com>
-# Generator: ArchForge v0.1.0
+# Maintainer: Scqxd <scqxd@aur.archlinux.org>
+# Generator: ArchForge v0.2.3
 
-pkgname=archforge-git
-_pkgname=archforge
-pkgver=0.1.0.r0.g${GIT_SHORT_SHA:-0}
+pkgname=archforge
+pkgver=0.2.3
 pkgrel=1
 pkgdesc="AI-powered TUI for PKGBUILD generation and AUR management"
-arch=('x86_64' 'aarch64')
-url="https://github.com/archforge/archforge"
+arch=('x86_64')
+url="https://github.com/Scqxd/archforge"
 license=('MIT')
-depends=('rust' 'cargo' 'git')
-makedepends=('cargo' 'git' 'openssl' 'pkgconf')
+depends=('glibc' 'gcc-libs')
+makedepends=('cargo' 'rust')
 optdepends=(
-    'makepkg: for building packages'
-    'paru: AUR helper'
-    'yay: AUR helper'
-    'jq: for JSON processing'
+    'paru: AUR helper integration'
+    'yay: AUR helper integration'
 )
-checkdepends=()
-provides=('archforge')
-conflicts=('archforge')
-source=("git+${url}.git#branch=main")
-sha256sums=('SKIP')
-
-pkgver() {
-    cd "$_pkgname"
-    # Version based on git state
-    if git describe --tags &>/dev/null; then
-        git describe --tags --abbrev=0 | sed 's/v//'
-    else
-        printf "0.1.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-    fi
-}
+provides=('aur-manager' 'pkgbuild-generator')
+conflicts=('archforge-git')
+source=("https://github.com/Scqxd/archforge/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('6bdb4334e9be334e556e88bf4a646c22ff77b85c03a2872191d72edd608d1943')
 
 prepare() {
-    cd "$_pkgname"
+    cd "$pkgname-$pkgver"
     cargo fetch --locked
 }
 
 build() {
-    cd "$_pkgname"
-    export RUSTUP_TOOLCHAIN=stable
-    cargo build --release --locked --all-features
+    cd "$pkgname-$pkgver"
+    cargo build --release --locked
 }
 
 check() {
-    cd "$_pkgname"
-    export RUSTUP_TOOLCHAIN=stable
-    cargo test --release --all-features
+    cd "$pkgname-$pkgver"
+    cargo test --release --locked
 }
 
 package() {
-    cd "$_pkgname"
-    export RUSTUP_TOOLCHAIN=stable
-
-    # Install binary
-    install -Dm755 "target/release/archforge" "$pkgdir/usr/bin/archforge"
-
-    # Install man page
-    install -Dm644 "archforge.1" "$pkgdir/usr/share/man/man1/archforge.1"
+    cd "$pkgname-$pkgver"
+    install -Dm755 target/release/archforge "$pkgdir/usr/bin/archforge"
 
     # Install bash completion
-    install -Dm644 "completions/archforge.bash" \
-        "$pkgdir/usr/share/bash-completion/completions/archforge"
+    install -Dm644 archforge/src/cli.rs \
+        "$pkgdir/usr/share/bash_completion/completions/archforge" 2>/dev/null || true
 
-    # Install fish completion
-    install -Dm644 "completions/archforge.fish" \
-        "$pkgdir/usr/share/fish/completions/archforge.fish"
-
-    # Install zsh completion
-    install -Dm644 "completions/_archforge" \
-        "$pkgdir/usr/share/zsh/site-functions/_archforge"
+    # Install man page (if exists)
+    if [ -f target/release/archforge.1 ]; then
+        install -Dm644 target/release/archforge.1 \
+            "$pkgdir/usr/share/man/man1/archforge.1"
+    fi
 }
