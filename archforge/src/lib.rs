@@ -2,11 +2,13 @@
 
 pub mod ai;
 pub mod cli;
+pub mod templates;
 #[cfg(feature = "tui")]
 pub mod tui;
 
 pub use ai::{AiProvider, ChutesClient};
 pub use cli::Cli;
+pub use templates::TemplateKind;
 
 /// Version of ArchForge
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -1,42 +1,76 @@
-use archforge::{ai::ChutesClient, Cli, VERSION};
+//! ArchForge - AI-powered TUI for PKGBUILD generation and AUR management
+
+use std::path::Path;
+use std::error::Error;
 use clap::Parser;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("ArchForge v{} starting...", VERSION);
+pub mod ai;
+pub mod cli;
+pub mod templates;
+
+pub use ai::{AiProvider, ChutesClient};
+pub use cli::Cli;
+pub use templates::TemplateKind;
+
+/// Version of ArchForge
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Homepage
+pub const HOMEPAGE: &str = "https://github.com/archforge/archforge";
+
+/// Print ArchForge ASCII logo
+pub fn print_logo() {
+    println!(r#"    ╔══════════════════════════════════════╗
+    ║       ArchForge v{}               ║
+    ║   AI-powered PKGBUILD Generator      ║
+    ╚══════════════════════════════════════╝"#, VERSION);
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    // Print logo for interactive TUI only
+    if let Some(cmd) = std::env::args().nth(1) {
+        if cmd == "interactive" || cmd == "-i" || cmd.is_empty() {
+            print_logo();
+            println!();
+        }
+    }
 
     // Parse CLI arguments
     let cli = Cli::parse();
 
     // Run the command
     match cli.command {
-        archforge::cli::Commands::Generate { description, output, quiet: _, ai_provider, api_key } => {
+        cli::Commands::Generate { description, output, quiet: _, ai_provider, api_key } => {
             generate(&description, output, ai_provider, api_key)?;
         }
-        archforge::cli::Commands::Build { package, install: _, nodeps: _ } => {
+        cli::Commands::Build { package, install: _, nodeps: _ } => {
             build(&package)?;
         }
-        archforge::cli::Commands::Search { query, json, limit: _ } => {
+        cli::Commands::Search { query, json, limit: _ } => {
             search(&query, json)?;
         }
-        archforge::cli::Commands::Info { package } => {
+        cli::Commands::Info { package } => {
             info(&package)?;
         }
-        archforge::cli::Commands::Deploy { package, target: _, yes: _ } => {
+        cli::Commands::Deploy { package, target: _, yes: _ } => {
             deploy(&package)?;
         }
-        archforge::cli::Commands::Interactive { no_model: _ } => {
+        cli::Commands::Interactive { no_model: _ } => {
             run_tui()?;
         }
-        archforge::cli::Commands::Init { name, template: _, directory } => {
+        cli::Commands::Init { name, template: _, directory } => {
             init(&name, directory)?;
         }
-        archforge::cli::Commands::Swarm(cmd) => {
+        cli::Commands::Validate { path, srcinfo, dependencies } => {
+            validate(&path, srcinfo, dependencies)?;
+        }
+        cli::Commands::Swarm(cmd) => {
             swarm(cmd)?;
         }
-        archforge::cli::Commands::Status => {
+        cli::Commands::Status => {
             status()?;
         }
-        archforge::cli::Commands::Cache(cmd) => {
+        cli::Commands::Cache(cmd) => {
             cache(cmd)?;
         }
     }
@@ -47,38 +81,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn generate(
     description: &str,
     output: Option<std::path::PathBuf>,
-    ai_provider: archforge::ai::AiProvider,
+    ai_provider: ai::AiProvider,
     api_key: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Generating PKGBUILD for: {}", description);
 
     match ai_provider {
-        archforge::ai::AiProvider::Chutes => {
+        ai::AiProvider::Chutes => {
             let api_key = api_key.or_else(|| {
                 std::env::var("CHUTES_API_KEY").ok()
-            }).expect("API key required. Set CHUTES_API_KEY env var or use --api-key");
+            });
 
-            let client = ChutesClient::new(api_key);
-            match client.generate_pkgbuild(description) {
-                Ok(pkgbuild) => {
-                    if let Some(path) = output {
-                        std::fs::write(&path, &pkgbuild)?;
-                        eprintln!("PKGBUILD saved to: {}", path.display());
-                    } else {
-                        println!("{}", pkgbuild);
+            if let Some(api_key) = api_key {
+                let client = ChutesClient::new(api_key);
+                match client.generate_pkgbuild(description) {
+                    Ok(pkgbuild) => {
+                        if let Some(path) = output {
+                            std::fs::write(&path, &pkgbuild)?;
+                            eprintln!("PKGBUILD saved to: {}", path.display());
+                        } else {
+                            println!("{}", pkgbuild);
+                        }
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        eprintln!("AI generation failed: {}. Falling back to template...", e);
                     }
                 }
-                Err(e) => {
-                    eprintln!("AI generation failed: {}. Falling back to template...", e);
-                    generate_fallback(description, output)?;
-                }
+            } else {
+                eprintln!("No API key provided. Using fallback template generation.");
             }
+            generate_fallback(description, output)?;
         }
-        archforge::ai::AiProvider::Local => {
+        ai::AiProvider::Local => {
             eprintln!("Local AI provider not implemented yet. Using fallback.");
             generate_fallback(description, output)?;
         }
-        archforge::ai::AiProvider::Openai => {
+        ai::AiProvider::Openai => {
             eprintln!("OpenAI provider not implemented yet. Using fallback.");
             generate_fallback(description, output)?;
         }
@@ -93,102 +132,17 @@ fn generate_fallback(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let pkgname = slugify(description);
 
-    // Detect simple package type from description
-    let is_c_cpp = description.to_lowercase().contains(" c") || description.to_lowercase().contains("c++");
-    let is_go = description.to_lowercase().contains(" go ");
-    let is_python = description.to_lowercase().contains("python");
+    // Detect language and generate appropriate template
+    let template_kind = TemplateKind::from_description(description);
+    let pkgver = "0.1.0";
 
-    let (makedepends, build_block, package_block) = if is_c_cpp {
-        (
-            "('gcc' 'make')".to_string(),
-            format!(
-                r#"build() {{
-    cd "$pkgname-$pkgver"
-    make
-}}"#,
-            ),
-            format!(r#"package() {{
-    install -Dm755 {} "$pkgdir/usr/bin/{}"
-}}"#, pkgname, pkgname)
-        )
-    } else if is_go {
-        (
-            "('go')".to_string(),
-            format!(
-                r#"build() {{
-    cd "$pkgname-$pkgver"
-    go build -o {} -ldflags="-s -w"
-}}"#,
-                pkgname
-            ),
-            format!(r#"package() {{
-    install -Dm755 {} "$pkgdir/usr/bin/{}"
-}}"#, pkgname, pkgname)
-        )
-    } else if is_python {
-        (
-            "('python' 'pip')".to_string(),
-            format!(
-                r#"build() {{
-    cd "$pkgname-$pkgver"
-    python setup.py build --prefix="$pkgdir"
-}}"#,
-            ),
-            format!(r#"package() {{
-    python setup.py install --root="$pkgdir" --prefix=/usr
-}}"#,
-            )
-        )
-    } else {
-        // Default to simple C template
-        (
-            "('gcc' 'make')".to_string(),
-            format!(
-                r#"build() {{
-    cd "$pkgname-$pkgver"
-    gcc -o {} main.c
-}}"#,
-                pkgname
-            ),
-            format!(r#"package() {{
-    install -Dm755 {} "$pkgdir/usr/bin/{}"
-}}"#, pkgname, pkgname)
-        )
-    };
-
-    let output_text = format!(
-        r#"# Generated by ArchForge
-# Description: {}
-
-pkgname={}
-pkgver=0.1.0
-pkgrel=1
-pkgdesc="{}"
-arch=('x86_64')
-url="https://example.com"
-license=('MIT')
-depends=('glibc')
-makedepends={}
-source=("https://example.com/archive/v$pkgver.tar.gz")
-sha256sums=('SKIP')
-
-{}
-
-{}
-"#,
-        description,
-        pkgname,
-        description,
-        makedepends,
-        build_block,
-        package_block
-    );
+    let pkgbuild = template_kind.generate_pkgbuild(&pkgname, pkgver, description);
 
     if let Some(path) = output {
-        std::fs::write(&path, &output_text)?;
+        std::fs::write(&path, &pkgbuild)?;
         eprintln!("PKGBUILD saved to: {}", path.display());
     } else {
-        println!("{}", output_text);
+        println!("{}", pkgbuild);
     }
 
     Ok(())
@@ -347,35 +301,9 @@ fn init(
 
     std::fs::create_dir_all(&dir)?;
 
-    let pkgbuild = format!(
-        r#"# ArchForge PKGBUILD
-pkgname={}
-pkgver=0.1.0
-pkgrel=1
-pkgdesc="A package generated by ArchForge"
-arch=('x86_64')
-url="https://github.com/{}"
-license=('MIT')
-depends=('glibc')
-makedepends=('cargo')
-source=("$url/archive/v$pkgver.tar.gz")
-sha256sums=('SKIP')
-
-build() {{
-    cd "$pkgname-$pkgver"
-    cargo build --release
-}}
-
-package() {{
-    cd "target/release"
-    install -Dm755 {} "$pkgdir/usr/bin/{}"
-}}
-"#,
-        name,
-        name,
-        name,
-        name
-    );
+    // Use the template system for init
+    let template_kind = TemplateKind::from_description(name);
+    let pkgbuild = template_kind.generate_pkgbuild(name, "0.1.0", &format!("A package generated by ArchForge"));
 
     std::fs::write(dir.join("PKGBUILD"), pkgbuild)?;
     std::fs::write(dir.join(".gitignore"), "target/\n*.pkg.tar.zst\n")?;
@@ -388,19 +316,220 @@ package() {{
     Ok(())
 }
 
-fn swarm(cmd: archforge::cli::SwarmCommands) -> Result<(), Box<dyn std::error::Error>> {
+/// Validate a PKGBUILD using namcap
+fn validate(
+    path: &Path,
+    validate_srcinfo: bool,
+    check_deps: bool,
+) -> Result<(), Box<dyn Error>> {
+    eprintln!("Validating PKGBUILD at: {}", path.display());
+
+    // Resolve path
+    let pkgbuild_path = if path.is_dir() {
+        path.to_path_buf()
+    } else {
+        path.parent().unwrap_or(&Path::new(".")).to_path_buf()
+    };
+
+    // Check if namcap is installed
+    let namcap_installed = std::process::Command::new("which")
+        .arg("namcap")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !namcap_installed {
+        eprintln!("Warning: namcap not installed. Install with: sudo pacman -S namcap");
+        eprintln!("Running basic PKGBUILD checks instead...\n");
+    }
+
+    // Find the PKGBUILD file
+    let pkbuild_file = pkgbuild_path.join("PKGBUILD");
+    let srcinfo_file = pkgbuild_path.join(".SRCINFO");
+
+    if !validate_srcinfo && !check_deps {
+        // Full PKGBUILD validation
+        if pkbuild_file.exists() {
+            run_namcap_pkbuild(&pkbuild_file)?;
+        } else {
+            eprintln!("PKGBUILD not found at: {}", pkbuild_file.display());
+        }
+    } else if validate_srcinfo {
+        // Validate .SRCINFO
+        if srcinfo_file.exists() {
+            run_namcap_srcinfo(&srcinfo_file)?;
+        } else {
+            eprintln!(".SRCINFO not found. Generate with: makepkg --printsrcinfo > .SRCINFO");
+        }
+    }
+
+    if check_deps {
+        // Check dependencies
+        check_dependencies(&pkgbuild_path)?;
+    }
+
+    eprintln!("\nValidation complete!");
+    Ok(())
+}
+
+/// Run namcap on a PKGBUILD file
+fn run_namcap_pkbuild(pkbuild_path: &Path) -> Result<(), Box<dyn Error>> {
+    eprintln!("Running namcap on PKGBUILD...");
+
+    let output = std::process::Command::new("namcap")
+        .arg(pkbuild_path)
+        .output();
+
+    match output {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+
+            if output.status.success() && stdout.is_empty() && stderr.is_empty() {
+                eprintln!("PKGBUILD validation passed! No issues found.");
+            } else {
+                if !stdout.is_empty() {
+                    eprintln!("Namcap output:\n{}", stdout);
+                }
+                if !stderr.is_empty() {
+                    eprintln!("Errors:\n{}", stderr);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Namcap not available or error running: {}", e);
+            eprintln!("Install namcap with: sudo pacman -S pacman-contrib");
+        }
+    }
+
+    Ok(())
+}
+
+/// Run namcap on a .SRCINFO file
+fn run_namcap_srcinfo(srcinfo_path: &Path) -> Result<(), Box<dyn Error>> {
+    eprintln!("Running namcap on .SRCINFO...");
+
+    let output = std::process::Command::new("namcap")
+        .arg(srcinfo_path)
+        .output();
+
+    match output {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+
+            if output.status.success() && stdout.is_empty() && stderr.is_empty() {
+                eprintln!(".SRCINFO validation passed!");
+            } else {
+                if !stdout.is_empty() {
+                    eprintln!("Namcap output:\n{}", stdout);
+                }
+                if !stderr.is_empty() {
+                    eprintln!("Errors:\n{}", stderr);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Namcap not available or error running: {}", e);
+        }
+    }
+
+    Ok(())
+}
+
+/// Check dependencies in a PKGBUILD
+fn check_dependencies(pkgdir: &Path) -> Result<(), Box<dyn Error>> {
+    eprintln!("Checking dependencies...");
+
+    let pkbuild_path = pkgdir.join("PKGBUILD");
+    if !pkbuild_path.exists() {
+        eprintln!("PKGBUILD not found. Cannot check dependencies.");
+        return Ok(());
+    }
+
+    // Read and parse PKGBUILD
+    let content = std::fs::read_to_string(&pkbuild_path)?;
+    let lines: Vec<&str> = content.lines().collect();
+
+    let mut depends: Vec<String> = Vec::new();
+    let mut makedepends: Vec<String> = Vec::new();
+
+    for line in &lines {
+        let trimmed = line.trim();
+        if trimmed.starts_with("depends=") {
+            if let Some(start) = trimmed.find('(') {
+                if let Some(end) = trimmed.find(')') {
+                    let deps = &trimmed[start + 1..end];
+                    for dep in deps.split_whitespace() {
+                        if !dep.is_empty() && dep != "'" && dep != "\"" {
+                            let clean_dep = dep.trim_matches('\'').trim_matches('"');
+                            depends.push(clean_dep.to_string());
+                        }
+                    }
+                }
+            }
+        } else if trimmed.starts_with("makedepends=") {
+            if let Some(start) = trimmed.find('(') {
+                if let Some(end) = trimmed.find(')') {
+                    let deps = &trimmed[start + 1..end];
+                    for dep in deps.split_whitespace() {
+                        if !dep.is_empty() && dep != "'" && dep != "\"" {
+                            let clean_dep = dep.trim_matches('\'').trim_matches('"');
+                            makedepends.push(clean_dep.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Print dependency summary
+    if !depends.is_empty() {
+        eprintln!("\nDependencies ({}):", depends.len());
+        for dep in &depends {
+            eprintln!("  - {}", dep);
+        }
+    }
+
+    if !makedepends.is_empty() {
+        eprintln!("\nBuild Dependencies ({}):", makedepends.len());
+        for dep in &makedepends {
+            eprintln!("  - {}", dep);
+        }
+    }
+
+    // Check if packages are installed
+    eprintln!("\nPackage availability check:");
+    for dep in &depends {
+        let installed = std::process::Command::new("pacman")
+            .args(&["-Qq", dep])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+
+        if installed {
+            eprintln!("  [OK] {} - installed", dep);
+        } else {
+            eprintln!("  [MISSING] {} - not installed", dep);
+        }
+    }
+
+    Ok(())
+}
+
+fn swarm(cmd: cli::SwarmCommands) -> Result<(), Box<dyn std::error::Error>> {
     match cmd {
-        archforge::cli::SwarmCommands::Start { telemetry: _ } => {
+        cli::SwarmCommands::Start { telemetry: _ } => {
             eprintln!("[SWARM] P2P networking - Coming soon!");
             eprintln!("[SWARM] This will enable telemetry sharing with other ArchForge users.");
         }
-        archforge::cli::SwarmCommands::Stop => {
+        cli::SwarmCommands::Stop => {
             eprintln!("[SWARM] Stopping swarm network...");
         }
-        archforge::cli::SwarmCommands::Peers => {
+        cli::SwarmCommands::Peers => {
             eprintln!("[SWARM] Connected peers: 0 (P2P coming soon)");
         }
-        archforge::cli::SwarmCommands::Sync { address: _ } => {
+        cli::SwarmCommands::Sync { address: _ } => {
             eprintln!("[SWARM] Sync - Coming soon!");
         }
     }
@@ -411,6 +540,13 @@ fn status() -> Result<(), Box<dyn std::error::Error>> {
     println!("ArchForge Status");
     println!("================");
     println!("Version: {}", VERSION);
+
+    // Check for namcap
+    if std::process::Command::new("which").arg("namcap").output()?.status.success() {
+        println!("Namcap: Installed");
+    } else {
+        println!("Namcap: NOT INSTALLED (install pacman-contrib)");
+    }
 
     // Check for makepkg
     if std::process::Command::new("makepkg").arg("--version").output().is_ok() {
@@ -434,9 +570,9 @@ fn status() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn cache(cmd: archforge::cli::CacheCommands) -> Result<(), Box<dyn std::error::Error>> {
+fn cache(cmd: cli::CacheCommands) -> Result<(), Box<dyn std::error::Error>> {
     match cmd {
-        archforge::cli::CacheCommands::Stats => {
+        cli::CacheCommands::Stats => {
             println!("Cache Statistics");
             println!("================");
 
@@ -461,10 +597,10 @@ fn cache(cmd: archforge::cli::CacheCommands) -> Result<(), Box<dyn std::error::E
                 }
             }
         }
-        archforge::cli::CacheCommands::Models => {
+        cli::CacheCommands::Models => {
             println!("Clearing model cache... (Not implemented yet)");
         }
-        archforge::cli::CacheCommands::Builds => {
+        cli::CacheCommands::Builds => {
             if let Some(cache_dir) = dirs::cache_dir() {
                 let build_cache = cache_dir.join("archforge/builds");
                 if build_cache.exists() {
@@ -475,7 +611,7 @@ fn cache(cmd: archforge::cli::CacheCommands) -> Result<(), Box<dyn std::error::E
                 }
             }
         }
-        archforge::cli::CacheCommands::All => {
+        cli::CacheCommands::All => {
             println!("Clearing all caches...");
             if let Some(cache_dir) = dirs::cache_dir() {
                 let archforge_cache = cache_dir.join("archforge");

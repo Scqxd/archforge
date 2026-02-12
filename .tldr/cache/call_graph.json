@@ -1,0 +1,452 @@
+{
+  "edges": [
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "status"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "parse_toml"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "App.handle_insert_mode",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "execute_command"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "default",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default_deploy_target"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "search"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "App.new",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "get_sample_packages"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "run_tui",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "run_tui"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "new",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "handle_key",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "handle_normal_mode"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "ui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_generate_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_build_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Config.save",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "config_path"
+    },
+    {
+      "from_file": "archforge/src/ai/chutes.rs",
+      "from_func": "ChutesClient.generate_pkgbuild",
+      "to_file": "archforge/src/ai/chutes.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "info"
+    },
+    {
+      "from_file": "archforge/src/ai/chutes.rs",
+      "from_func": "generate_pkgbuild",
+      "to_file": "archforge/src/ai/chutes.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Config.load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "config_path"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "cache"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "generate_srcinfo",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_deploy_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "AURUploader.deploy",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "push_updates"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "swarm"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "AURUploader.create_new_aur_repo",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Config.parse_toml",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Config.load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "new",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "get_sample_packages"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "AURUploader.generate_srcinfo",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "deploy",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "parse_pkgbuild_info"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "config_path"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Default.default",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default_bwrap_path"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_search_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "deploy",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "create_new_aur_repo"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "push_updates",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Config.load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "save"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "run_tui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "handle_key"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "parse_toml",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "ui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "render_generate_tab"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "run_tui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "ui"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Default.default",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default_deploy_target"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "generate",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "generate_fallback"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "App.handle_key",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "handle_insert_mode"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "handle_insert_mode",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "execute_command"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "save"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "ui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "render_search_tab"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "ui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "render_deploy_tab"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_deploy_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "init"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "build"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "Default.default",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_generate_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_build_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "generate_fallback",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "slugify"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "ui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "AURUploader.deploy",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "parse_pkgbuild_info"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "AURUploader.deploy",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "create_new_aur_repo"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "AURUploader.push_updates",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "run_tui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "create_new_aur_repo",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "deploy"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "handle_key",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "handle_insert_mode"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "App.new",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "default"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "Config.load",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "parse_toml"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "ui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "render_build_tab"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "App.handle_key",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "handle_normal_mode"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "run_tui",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "status_age"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "default",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default_bwrap_path"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "save",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "config_path"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "run_tui"
+    },
+    {
+      "from_file": "deploy/src/aur.rs",
+      "from_func": "deploy",
+      "to_file": "deploy/src/aur.rs",
+      "to_func": "push_updates"
+    },
+    {
+      "from_file": "archforge/src/main.rs",
+      "from_func": "main",
+      "to_file": "archforge/src/main.rs",
+      "to_func": "generate"
+    },
+    {
+      "from_file": "archforge/src/config.rs",
+      "from_func": "default_model_path",
+      "to_file": "archforge/src/config.rs",
+      "to_func": "default_cache_dir"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "render_search_tab",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    },
+    {
+      "from_file": "archforge/src/tui/mod.rs",
+      "from_func": "default",
+      "to_file": "archforge/src/tui/mod.rs",
+      "to_func": "new"
+    }
+  ],
+  "languages": [
+    "rust"
+  ],
+  "timestamp": 1770890247.1276429
+}

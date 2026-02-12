@@ -5,7 +5,29 @@ use std::path::PathBuf;
 /// AI-powered TUI for PKGBUILD generation and AUR management
 #[derive(Parser, Debug)]
 #[command(name = "archforge")]
-#[command(author, version, about, long_about = None)]
+#[command(author, version)]
+#[command(after_help = r#"Tips:
+  • Set CHUTES_API_KEY env var for AI generation
+  • Run 'archforge status' to check environment
+  • Use 'archforge generate "package description"' for quick start
+  • Use 'archforge interactive' for full TUI experience"#)]
+#[command(long_about = r#"ArchForge - AI-powered TUI for PKGBUILD generation and AUR management
+
+A modern tool for Arch Linux package maintainers with:
+  ✨ AI-powered PKGBUILD generation from natural language
+  🔍 AUR search and package information
+  ✅ PKGBUILD validation with namcap
+  🚀 Build and deployment automation
+
+Quick Start:
+  archforge generate 'rust http server'
+  archforge search 'vim plugins'
+  archforge validate ./mypkg
+  archforge interactive
+
+Environment:
+  CHUTES_API_KEY    AI provider API key (default: chutes)
+  ARCHFORGE_CONFIG  Config file path (default: ~/.config/archforge/config.toml)"#)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -113,6 +135,22 @@ pub enum Commands {
         /// Project directory
         #[arg(short, long)]
         directory: Option<PathBuf>,
+    },
+
+    /// Validate PKGBUILD using namcap
+    #[command(alias = "v")]
+    Validate {
+        /// Path to package directory or PKGBUILD
+        #[arg(default_value = ".")]
+        path: PathBuf,
+
+        /// Validate .SRCINFO instead of PKGBUILD
+        #[arg(long)]
+        srcinfo: bool,
+
+        /// Check dependencies only
+        #[arg(long)]
+        dependencies: bool,
     },
 
     /// Manage swarm network
