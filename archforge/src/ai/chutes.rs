@@ -17,7 +17,7 @@ impl ChutesClient {
     pub fn new(api_key: String) -> Self {
         Self {
             api_key,
-            base_url: "https://chutes.ai/api/v1".to_string(),
+            base_url: "https://api.chutes.ai/v1".to_string(),
             model: "MiniMaxAI/MiniMax-M2.1-TEE".to_string(),
         }
     }
@@ -57,7 +57,7 @@ Return ONLY the PKGBUILD content, no markdown, no explanations. If you cannot ge
 
         let client = reqwest::blocking::Client::new();
         let response = client
-            .post(&format!("{}/inference", self.base_url))
+            .post(&format!("{}/chat/completions", self.base_url))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .json(&request_body)
