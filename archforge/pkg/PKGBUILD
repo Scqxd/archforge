@@ -1,0 +1,22 @@
+# Maintainer: ArchForge Team <dimapokhomov245@mail.ru>
+pkgname=archforge
+pkgver=0.2.1
+pkgrel=1
+pkgdesc="AI-powered TUI for PKGBUILD generation and AUR management"
+arch=('x86_64')
+url="https://github.com/Scqxd/archforge"
+license=('MIT')
+depends=('rust')
+makedepends=('cargo')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Scqxd/archforge/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$pkgname-$pkgver/archforge"
+    cargo build --release --locked
+}
+
+package() {
+    cd "$pkgname-$pkgver/archforge"
+    install -Dm755 target/release/archforge -t "$pkgdir/usr/bin/"
+}

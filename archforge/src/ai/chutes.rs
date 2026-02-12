@@ -17,7 +17,7 @@ impl ChutesClient {
     pub fn new(api_key: String) -> Self {
         Self {
             api_key,
-            base_url: "https://chutes.io/api/v1".to_string(),
+            base_url: "https://chutes.ai/api/v1".to_string(),
             model: "MiniMaxAI/MiniMax-M2.1-TEE".to_string(),
         }
     }
