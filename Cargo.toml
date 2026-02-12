@@ -2,8 +2,6 @@
 resolver = "2"
 members = [
     "archforge",
-    "build",
-    "deploy",
 ]
 
 [workspace.package]

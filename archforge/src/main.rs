@@ -1,4 +1,4 @@
-use archforge::{ai::ChutesClient, Cli, Config, VERSION};
+use archforge::{ai::ChutesClient, Cli, VERSION};
 use clap::Parser;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
