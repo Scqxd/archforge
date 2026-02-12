@@ -1,21 +1,14 @@
-# archforge-git
+# ArchForge
 
 AI-powered TUI for PKGBUILD generation and AUR management.
 
-## Description
+## Описание
 
-ArchForge is a terminal user interface for generating PKGBUILD files from natural language descriptions and managing Arch User Repository packages.
+ArchForge — это инструмент командной строки и TUI для генерации PKGBUILD файлов из описания на естественном языке и управления пакетами AUR.
 
-### Features
+## Установка
 
-- **Natural Language Generation**: Describe what you want in plain English, get a PKGBUILD
-- **Interactive TUI**: Vim-like keybindings for efficient package management
-- **AUR Integration**: Search, install, and manage AUR packages
-- **Deployment**: Deploy to AUR, Docker, Flatpak, or Nix
-
-## Installation
-
-### From AUR (recommended)
+### Из AUR (рекомендуется)
 
 ```bash
 # Using yay
@@ -25,78 +18,190 @@ yay -S archforge-git
 paru -S archforge-git
 ```
 
-### From source
+### Из исходников
 
 ```bash
-git clone https://github.com/archforge/archforge.git
+git clone https://github.com/Scqxd/archforge.git
 cd archforge
-cargo install --path .
+cargo build --release
+./target/release/archforge --version
 ```
 
-## Usage
+## Быстрый старт
 
-### Generate PKGBUILD from natural language
+### Генерация PKGBUILD
 
 ```bash
-archforge "simple hello world program in C"
-archforge "firefox with vaapi support"
-archforge "neovim with python and lua plugins"
+# Описание пакета -> готовый PKGBUILD
+archforge generate "Консольный hello world на C"
+archforge generate "Neovim с поддержкой Python и Lua"
+archforge generate "Firefox с VAAPI"
 ```
 
-### Interactive TUI
+### Интерактивный режим
+
+```bash
+archforge interactive
+# или просто
+archforge
+```
+
+---
+
+## AI Генерация PKGBUILD
+
+ArchForge использует Chutes API (MiniMaxAI) для интеллектуальной генерации PKGBUILD.
+
+### Настройка API ключа
+
+**Вариант 1: Переменная окружения**
+```bash
+export CHUTES_API_KEY="твой_ключ"
+archforge generate "пакет"
+```
+
+**Вариант 2: Флаг --api-key**
+```bash
+archforge generate "пакет" --api-key "твой_ключ"
+```
+
+### Выбор AI провайдера
+
+```bash
+# Chutes API (MiniMaxAI/MiniMax-M2.1-TEE) - по умолчанию
+archforge generate "пакет" --ai-provider chutes
+
+# Локальная модель (в разработке)
+archforge generate "пакет" --ai-provider local
+
+# OpenAI (в разработке)
+archforge generate "пакет" --ai-provider openai
+```
+
+### Примеры
+
+```bash
+# Простой C/C++ проект
+archforge generate "Hello world на C"
+
+# Go приложение
+archforge generate "HTTP сервер на Go"
+
+# Python утилита
+archforge generate "Парсер JSON на Python"
+
+# Сложный пакет
+archforge generate "Neovim с LSP для Rust и autocomplete"
+```
+
+---
+
+## Команды
+
+### generate — Генерация PKGBUILD
+
+```bash
+archforge generate "описание" [опции]
+
+Опции:
+  -o, --output FILE     Сохранить в файл
+  -q, --quiet           Только вывод PKGBUILD
+  -a, --ai-provider     Выбор AI провайдера (chutes/local/openai)
+      --api-key         API ключ
+
+Примеры:
+  archforge generate "firefox" -o PKGBUILD
+  archforge generate "hello" --api-key "ключ"
+```
+
+### search — Поиск в AUR
+
+```bash
+archforge search "запрос" [опции]
+
+Опции:
+  -j, --json    JSON вывод
+  -l, --limit   Лимит результатов (по умолчанию 20)
+
+Примеры:
+  archforge search neovim
+  archforge search firefox -j
+```
+
+### info — Информация о пакете
+
+```bash
+archforge info <имя_пакета>
+```
+
+### build — Сборка пакета
+
+```bash
+archforge build <PKGBUILD/директория> [опции]
+
+Опции:
+  -i, --install    Установить после сборки
+      --nodeps     Пропустить проверку зависимостей
+```
+
+### init — Создание проекта
+
+```bash
+archforge init <имя> [опции]
+
+Опции:
+  -t, --template   Шаблон (basic)
+  -d, --directory  Директория
+```
+
+### interactive — Интерактивный TUI
 
 ```bash
 archforge interactive
 ```
 
-Or simply:
+### status — Статус системы
 
 ```bash
-archforge
+archforge status
 ```
 
-### Search AUR
+### cache — Управление кэшем
 
 ```bash
-archforge search neovim
-archforge search firefox
+archforge cache stats     # Статистика кэша
+archforge cache models    # Очистить кэш моделей
+archforge cache builds    # Очистить кэш сборок
+archforge cache all       # Очистить всё
 ```
 
-### Build packages
+---
 
-```bash
-archforge build PKGBUILD
-archforge build --nodeps PKGBUILD
-```
+## Fallback шаблоны
 
-### Deploy to various targets
+Если AI недоступен, ArchForge автоматически использует шаблоны с автоопределением языка:
 
-```bash
-archforge deploy aur           # Deploy to AUR
-archforge deploy docker        # Build Docker image
-archforge deploy flatpak       # Build Flatpak bundle
-archforge deploy nix           # Generate Nix flake
-```
+| Ключевые слова | makedepends | Особенности |
+|----------------|-------------|-------------|
+| C, C++ | gcc, make | `make` сборка |
+| Go, golang | go | `go build` |
+| Python | python, pip | `setup.py` |
+| (по умолчанию) | gcc, make | Простой C шаблон |
 
-## TUI Keybindings
+---
 
-| Key | Action |
-|-----|--------|
-| `h` / `j` / `k` / `l` | Navigate |
-| `i` | Insert mode |
-| `:` | Command mode |
-| `/` | Search |
-| `?` | Help |
-| `q` | Quit |
+## Конфигурация
 
-## Configuration
-
-Config file: `~/.config/archforge/config.toml`
+Файл: `~/.config/archforge/config.toml`
 
 ```toml
 [general]
 verbose = false
 cache_dir = "~/.cache/archforge"
+
+[ai]
+# Chutes API ключ (или используй CHUTES_API_KEY env)
+provider = "chutes"
 
 [build]
 makepkg_flags = ["--noconfirm", "--needed"]
@@ -106,19 +211,20 @@ parallel_jobs = 4
 rpc_url = "https://aur.archlinux.org/rpc"
 ```
 
-## Requirements
+---
+
+## Требования
 
 - Rust 1.75+
 - cargo
+- makepkg (base-devel)
 - git
-- makepkg (for building)
-- paru or yay (optional, for AUR helper features)
 
-## License
+## Лицензия
 
 MIT License
 
-## Contributing
+## Ссылки
 
-Issues and pull requests are welcome at:
-https://github.com/archforge/archforge
+- GitHub: https://github.com/Scqxd/archforge
+- AUR: https://aur.archlinux.org/packages/archforge-git
