@@ -1,0 +1,20 @@
+pkgbase = archforge
+	pkgdesc = AI-powered TUI for PKGBUILD generation and AUR management
+	pkgver = 0.2.0
+	pkgrel = 1
+	url = https://github.com/Scqxd/archforge
+	arch = x86_64
+	license = MIT
+	makedepends = cargo
+	makedepends = rust
+	depends = glibc
+	depends = gcc-libs
+	optdepends = paru: AUR helper integration
+	optdepends = yay: AUR helper integration
+	provides = aur-manager
+	provides = pkgbuild-generator
+	conflicts = archforge-git
+	source = https://github.com/Scqxd/archforge/archive/refs/tags/v0.2.0.tar.gz
+	sha256sums = SKIP
+
+pkgname = archforge
