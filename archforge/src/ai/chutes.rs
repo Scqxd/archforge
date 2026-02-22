@@ -3,6 +3,7 @@
 use reqwest;
 use serde::Deserialize;
 use std::error::Error;
+use std::time::Duration;
 
 /// Chutes API client
 #[derive(Debug, Clone)]
@@ -10,15 +11,22 @@ pub struct ChutesClient {
     api_key: String,
     base_url: String,
     model: String,
+    timeout_secs: u64,
 }
 
 impl ChutesClient {
-    /// Create a new ChutesClient
+    /// Create a new ChutesClient with default timeout (30s)
     pub fn new(api_key: String) -> Self {
+        Self::with_timeout(api_key, 30)
+    }
+
+    /// Create a new ChutesClient with custom timeout
+    pub fn with_timeout(api_key: String, timeout_secs: u64) -> Self {
         Self {
             api_key,
             base_url: "https://api.chutes.ai/v1".to_string(),
             model: "MiniMaxAI/MiniMax-M2.1-TEE".to_string(),
+            timeout_secs,
         }
     }
 
@@ -55,9 +63,12 @@ Return ONLY the PKGBUILD content, no markdown, no explanations. If you cannot ge
             "temperature": 0.7
         });
 
-        let client = reqwest::blocking::Client::new();
+        let client = reqwest::blocking::Client::builder()
+            .timeout(Duration::from_secs(self.timeout_secs))
+            .build()?;
+
         let response = client
-            .post(&format!("{}/chat/completions", self.base_url))
+            .post(format!("{}/chat/completions", self.base_url))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .json(&request_body)
@@ -75,18 +86,8 @@ Return ONLY the PKGBUILD content, no markdown, no explanations. If you cannot ge
             let content = text.message.content.clone();
             eprintln!("[AI] Response received ({} chars)", content.len());
 
-            // Extract PKGBUILD from response (handle potential markdown code blocks)
-            let content = content
-                .trim()
-                .strip_prefix("```bash")
-                .or(content.trim().strip_prefix("```"))
-                .map(|s| s.trim())
-                .unwrap_or(&content)
-                .trim_end()
-                .strip_suffix("```")
-                .map(|s| s.trim())
-                .unwrap_or(&content)
-                .to_string();
+            // Extract PKGBUILD from response (handle markdown code blocks)
+            let content = extract_pkgbuild_from_markdown(&content);
 
             if content.starts_with("ERROR") {
                 return Err(format!("AI generation failed: {}", content).into());
@@ -104,24 +105,51 @@ Return ONLY the PKGBUILD content, no markdown, no explanations. If you cannot ge
     }
 }
 
+/// Extract PKGBUILD content from markdown code blocks
+fn extract_pkgbuild_from_markdown(content: &str) -> String {
+    let trimmed = content.trim();
+    
+    // Try to strip markdown code block with language
+    let stripped = trimmed
+        .strip_prefix("```bash")
+        .or_else(|| trimmed.strip_prefix("```sh"))
+        .or_else(|| trimmed.strip_prefix("```"))
+        .unwrap_or(trimmed);
+    
+    // Remove trailing code block marker and trim
+    stripped
+        .trim_end()
+        .strip_suffix("```")
+        .unwrap_or(stripped)
+        .trim()
+        .to_string()
+}
+
 #[derive(Deserialize, Debug)]
 struct ChutesResponse {
+    #[allow(dead_code)]
     id: String,
+    #[allow(dead_code)]
     object: String,
+    #[allow(dead_code)]
     created: u64,
+    #[allow(dead_code)]
     model: String,
     choices: Vec<ChutesChoice>,
 }
 
 #[derive(Deserialize, Debug)]
 struct ChutesChoice {
+    #[allow(dead_code)]
     index: u32,
     message: ChutesMessage,
+    #[allow(dead_code)]
     finish_reason: String,
 }
 
 #[derive(Deserialize, Debug)]
 struct ChutesMessage {
+    #[allow(dead_code)]
     role: String,
     content: String,
 }

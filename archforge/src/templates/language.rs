@@ -122,12 +122,12 @@ fn has_any_keyword(desc: &str, keywords: &[&str]) -> bool {
 
             // Check character BEFORE keyword (should be non-alphanumeric or start of string)
             let before_ok = abs_pos == 0 ||
-                !desc[(abs_pos - 1)..abs_pos].chars().next().map_or(false, |c| c.is_alphanumeric());
+                !desc[(abs_pos - 1)..abs_pos].chars().next().is_some_and(|c| c.is_alphanumeric());
 
             // Check character AFTER keyword (should be non-alphanumeric or end of string)
             let after_pos = abs_pos + kw.len();
             let after_ok = after_pos >= desc.len() ||
-                !desc[after_pos..].chars().next().map_or(false, |c| c.is_alphanumeric());
+                !desc[after_pos..].chars().next().is_some_and(|c| c.is_alphanumeric());
 
             if before_ok && after_ok {
                 return true;

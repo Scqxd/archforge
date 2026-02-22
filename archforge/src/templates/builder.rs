@@ -1,7 +1,7 @@
 //! Template builder for generating PKGBUILD content
 //!
 //! Contains the logic for building PKGBUILD templates for each
-/// TemplateKind.
+//! [`TemplateKind`].
 
 /// Builder for generating PKGBUILD templates
 #[derive(Debug, Clone)]
@@ -361,9 +361,10 @@ source=("https://rubygems.org/downloads/{pkgname}-$pkgver.gem")
 sha256sums=('SKIP')
 
 package() {{
+    local _gemdir="$(ruby -e 'puts Gem.default_dir')"
     gem install --no-document --ignore-dependencies \
         --bindir "$pkgdir/usr/bin" \
-        --install-dir "$pkgdir/usr/lib/ruby/gems/$ruby_engine/gems/{pkgname}-$pkgver" \
+        --install-dir "$pkgdir/$_gemdir" \
         "$pkgname-$pkgver.gem"
 }}
 "#,
