@@ -255,7 +255,7 @@ fn search(query: &str, json: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     // Query AUR RPC
     let url = format!(
-        "https://aur.archlinux.org/rpc.php?v=5&type=search&arg={}",
+        "https://aur.archlinux.org/rpc?v=5&type=search&arg={}",
         urlencoding::encode(query)
     );
 
@@ -289,14 +289,17 @@ fn info(package: &str) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Getting info for: {}", package);
 
     let url = format!(
-        "https://aur.archlinux.org/rpc.php?v=5&type=info&arg={}",
+        "https://aur.archlinux.org/rpc?v=5&type=info&arg={}",
         urlencoding::encode(package)
     );
 
     let response = reqwest::blocking::get(&url)?
         .json::<serde_json::Value>()?;
 
-    if let Some(result) = response.get("results").and_then(|r| r.as_object()) {
+    if let Some(result) = response.get("results")
+        .and_then(|r| r.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|v| v.as_object()) {
         println!("Package: {}", result.get("Name").and_then(|v| v.as_str()).unwrap_or("?"));
         println!("Version: {}", result.get("Version").and_then(|v| v.as_str()).unwrap_or("?"));
         println!("Description: {}", result.get("Description").and_then(|v| v.as_str()).unwrap_or(""));
