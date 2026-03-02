@@ -1,11 +1,11 @@
 # Maintainer: Scqxd <scqxd@aur.archlinux.org>
-# Generator: ArchForge v0.2.3
+# Generator: ArchForge v0.2.5
 
 pkgname=archforge
-pkgver=0.2.3
+pkgver=0.2.5
 pkgrel=1
 pkgdesc="AI-powered TUI for PKGBUILD generation and AUR management"
-arch=('x86_64')
+arch=('x86_64' 'aarch64')
 url="https://github.com/Scqxd/archforge"
 license=('MIT')
 depends=('glibc' 'gcc-libs')
@@ -17,21 +17,21 @@ optdepends=(
 provides=('aur-manager' 'pkgbuild-generator')
 conflicts=('archforge-git')
 source=("https://github.com/Scqxd/archforge/archive/refs/tags/v${pkgver}.tar.gz")
-sha256sums=('6bdb4334e9be334e556e88bf4a646c22ff77b85c03a2872191d72edd608d1943')
+sha256sums=('e7dfe769aaed1776eeb4bb471af3363c722c6c51314a95104340607b6a84e929')
 
 prepare() {
     cd "$pkgname-$pkgver"
-    cargo fetch --locked
+    cargo fetch
 }
 
 build() {
     cd "$pkgname-$pkgver"
-    cargo build --release --locked
+    cargo build --release
 }
 
 check() {
     cd "$pkgname-$pkgver"
-    cargo test --release --locked
+    cargo test --release
 }
 
 package() {
@@ -39,8 +39,12 @@ package() {
     install -Dm755 target/release/archforge "$pkgdir/usr/bin/archforge"
 
     # Install bash completion
-    install -Dm644 archforge/src/cli.rs \
+    install -Dm644 completions/archforge.bash \
         "$pkgdir/usr/share/bash_completion/completions/archforge" 2>/dev/null || true
+
+    # Install fish completion
+    install -Dm644 completions/archforge.fish \
+        "$pkgdir/usr/share/fish/completions/archforge.fish" 2>/dev/null || true
 
     # Install man page (if exists)
     if [ -f target/release/archforge.1 ]; then
