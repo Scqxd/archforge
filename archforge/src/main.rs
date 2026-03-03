@@ -1,8 +1,15 @@
 //! ArchForge - AI-powered TUI for PKGBUILD generation and AUR management
+//!
+//! Optimized with:
+//! - Batch dependency checking with single pacman call
+//! - AUR response caching
+//! - Efficient file operations
 
 use std::path::Path;
 use std::error::Error;
 use std::collections::HashSet;
+use std::sync::{OnceLock, RwLock};
+use std::collections::HashMap;
 use clap::Parser;
 
 use archforge::cli::{Cli, SwarmCommands, CacheCommands};
@@ -16,6 +23,13 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Homepage
 pub const HOMEPAGE: &str = "https://github.com/archforge/archforge";
+
+/// AUR response cache (optimization: avoid redundant RPC calls)
+static AUR_CACHE: OnceLock<RwLock<HashMap<String, serde_json::Value>>> = OnceLock::new();
+
+fn get_aur_cache() -> &'static RwLock<HashMap<String, serde_json::Value>> {
+    AUR_CACHE.get_or_init(|| RwLock::new(HashMap::with_capacity(64)))
+}
 
 /// Print ArchForge ASCII logo
 pub fn print_logo() {
@@ -253,14 +267,28 @@ fn find_pkg_file(dir: &std::path::Path) -> Result<String, Box<dyn std::error::Er
 fn search(query: &str, json: bool) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Searching AUR for: {}", query);
 
-    // Query AUR RPC
-    let url = format!(
-        "https://aur.archlinux.org/rpc?v=5&type=search&arg={}",
-        urlencoding::encode(query)
-    );
+    // Check cache first (optimization: avoid redundant RPC calls)
+    let cache_key = format!("search:{}", query);
+    let response = if let Some(cached) = get_aur_cache().read().unwrap().get(&cache_key) {
+        eprintln!("[AUR] Cache hit for search query");
+        cached.clone()
+    } else {
+        // Query AUR RPC
+        let url = format!(
+            "https://aur.archlinux.org/rpc?v=5&type=search&arg={}",
+            urlencoding::encode(query)
+        );
 
-    let response = reqwest::blocking::get(&url)?
-        .json::<serde_json::Value>()?;
+        let response = reqwest::blocking::get(&url)?
+            .json::<serde_json::Value>()?;
+
+        // Cache the response
+        if let Ok(mut cache) = get_aur_cache().write() {
+            cache.insert(cache_key, response.clone());
+        }
+
+        response
+    };
 
     if json {
         println!("{}", serde_json::to_string_pretty(&response)?);
@@ -288,13 +316,27 @@ fn search(query: &str, json: bool) -> Result<(), Box<dyn std::error::Error>> {
 fn info(package: &str) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("Getting info for: {}", package);
 
-    let url = format!(
-        "https://aur.archlinux.org/rpc?v=5&type=info&arg={}",
-        urlencoding::encode(package)
-    );
+    // Check cache first (optimization: avoid redundant RPC calls)
+    let cache_key = format!("info:{}", package);
+    let response = if let Some(cached) = get_aur_cache().read().unwrap().get(&cache_key) {
+        eprintln!("[AUR] Cache hit for package info");
+        cached.clone()
+    } else {
+        let url = format!(
+            "https://aur.archlinux.org/rpc?v=5&type=info&arg={}",
+            urlencoding::encode(package)
+        );
 
-    let response = reqwest::blocking::get(&url)?
-        .json::<serde_json::Value>()?;
+        let response = reqwest::blocking::get(&url)?
+            .json::<serde_json::Value>()?;
+
+        // Cache the response
+        if let Ok(mut cache) = get_aur_cache().write() {
+            cache.insert(cache_key, response.clone());
+        }
+
+        response
+    };
 
     if let Some(result) = response.get("results")
         .and_then(|r| r.as_array())
@@ -515,6 +557,7 @@ fn run_namcap_srcinfo(srcinfo_path: &Path) -> Result<(), Box<dyn Error>> {
 }
 
 /// Check dependencies in a PKGBUILD
+/// Optimized: Batch query all packages at once instead of one-by-one
 fn check_dependencies(pkgdir: &Path) -> Result<(), Box<dyn Error>> {
     eprintln!("Checking dependencies...");
 
@@ -525,7 +568,6 @@ fn check_dependencies(pkgdir: &Path) -> Result<(), Box<dyn Error>> {
     }
 
     // Use bash to source the PKGBUILD and extract variables
-    // Security: Use absolute path and avoid shell injection by not interpolating path directly
     let script = r#"
         source PKGBUILD 2>/dev/null || exit 1
         echo "DEPENDS_START"
@@ -543,7 +585,7 @@ fn check_dependencies(pkgdir: &Path) -> Result<(), Box<dyn Error>> {
     let output = std::process::Command::new("bash")
         .arg("-c")
         .arg(script)
-        .current_dir(pkgdir)  // Use current_dir instead of interpolating path
+        .current_dir(pkgdir)
         .output()?;
 
     let output_str = String::from_utf8_lossy(&output.stdout);
@@ -589,13 +631,13 @@ fn check_dependencies(pkgdir: &Path) -> Result<(), Box<dyn Error>> {
         eprintln!("\nNo dependencies found in PKGBUILD");
     }
 
-    // Check if packages are installed - batch query for better performance
+    // Check if packages are installed - OPTIMIZED: batch query for better performance
     let all_deps: Vec<&String> = depends.iter().chain(makedepends.iter()).collect();
 
     if !all_deps.is_empty() {
         eprintln!("\nPackage availability check:");
 
-        // Query all packages at once for better performance
+        // Extract package names (strip version operators)
         let pkg_names: Vec<String> = all_deps.iter()
             .map(|dep| {
                 dep.split_whitespace()
@@ -606,22 +648,30 @@ fn check_dependencies(pkgdir: &Path) -> Result<(), Box<dyn Error>> {
             })
             .collect();
 
-        let pacman_output = std::process::Command::new("pacman")
-            .args(["-Q", "--quiet"])
-            .args(pkg_names.iter().map(|s| s.as_str()))
-            .output()
-            .ok();
+        // OPTIMIZATION: Query all packages in a single pacman call
+        // Split into chunks to avoid command line length limits
+        const BATCH_SIZE: usize = 50;
+        let mut installed_set: HashSet<String> = HashSet::new();
 
-        let installed_pkgs = pacman_output
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .unwrap_or_default();
+        for chunk in pkg_names.chunks(BATCH_SIZE) {
+            let pacman_output = std::process::Command::new("pacman")
+                .args(["-Q", "--quiet"])
+                .args(chunk)
+                .output()
+                .ok();
 
-        let installed_set: HashSet<&str> = installed_pkgs
-            .lines()
-            .collect();
+            if let Some(output) = pacman_output {
+                if let Ok(pkgs) = String::from_utf8(output.stdout) {
+                    for pkg in pkgs.lines() {
+                        installed_set.insert(pkg.to_string());
+                    }
+                }
+            }
+        }
 
+        // Display results
         for (_dep, pkg_name) in all_deps.iter().zip(pkg_names.iter()) {
-            if installed_set.contains(pkg_name.as_str()) {
+            if installed_set.contains(pkg_name) {
                 eprintln!("  ✓ {} - installed", pkg_name);
             } else {
                 eprintln!("  ✗ {} - not installed", pkg_name);
@@ -711,6 +761,15 @@ fn cache(cmd: CacheCommands) -> Result<(), Box<dyn std::error::Error>> {
                     println!("Cache directory: Empty");
                 }
             }
+
+            // Show in-memory cache stats
+            if let Ok(cache) = get_aur_cache().read() {
+                println!("\nAUR RPC Cache:");
+                println!("  Entries: {}", cache.len());
+            }
+            let ai_cache_count = archforge::ai::chutes::get_response_cache_for_stats();
+            println!("\nAI Response Cache:");
+            println!("  Entries: {}", ai_cache_count);
         }
         CacheCommands::Models => {
             println!("Clearing model cache... (Not implemented yet)");
@@ -728,11 +787,20 @@ fn cache(cmd: CacheCommands) -> Result<(), Box<dyn std::error::Error>> {
         }
         CacheCommands::All => {
             println!("Clearing all caches...");
+            
+            // Clear in-memory caches
+            if let Ok(mut cache) = get_aur_cache().write() {
+                cache.clear();
+                println!("AUR RPC cache cleared");
+            }
+            archforge::ai::chutes::clear_response_cache();
+            
+            // Clear disk cache
             if let Some(cache_dir) = dirs::cache_dir() {
                 let archforge_cache = cache_dir.join("archforge");
                 if archforge_cache.exists() {
                     std::fs::remove_dir_all(&archforge_cache)?;
-                    println!("All caches cleared");
+                    println!("Disk cache cleared");
                 }
             }
         }

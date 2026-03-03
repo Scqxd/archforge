@@ -7,7 +7,7 @@ pub use chutes::ChutesClient;
 /// AI provider type
 #[derive(Debug, Clone, Default, clap::ValueEnum)]
 pub enum AiProvider {
-    /// Chutes.io API (MiniMaxAI/MiniMax-M2.1-TEE)
+    /// Chutes.io API (MiniMaxAI/MiniMax-M2.5-TEE)
     #[default]
     Chutes,
     /// Local model (not implemented yet)

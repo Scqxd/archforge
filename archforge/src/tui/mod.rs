@@ -5,6 +5,11 @@
 //! - PKGBUILD preview with syntax highlighting
 //! - Vim-like keybindings (hjkl, /search, :w, :q)
 //! - Real-time status updates
+//!
+//! Optimized with:
+//! - Conditional re-rendering (only when state changes)
+//! - Reduced frame rate when idle
+//! - Efficient state updates
 
 use std::io::{self, stdout};
 use std::time::{Duration, Instant};
@@ -50,6 +55,12 @@ pub struct App {
     pub scroll_offset: u16,
     /// Quit flag
     pub should_quit: bool,
+    /// Optimization: track if UI needs redraw
+    needs_redraw: bool,
+    /// Optimization: last render timestamp
+    last_render: Instant,
+    /// Optimization: minimum frame interval
+    min_frame_interval: Duration,
 }
 
 impl Default for App {
@@ -67,6 +78,9 @@ impl Default for App {
             build_output: String::new(),
             scroll_offset: 0,
             should_quit: false,
+            needs_redraw: true,
+            last_render: Instant::now(),
+            min_frame_interval: Duration::from_millis(50), // 20 FPS cap for efficiency
         }
     }
 }
@@ -84,12 +98,25 @@ impl App {
         Self {
             packages: get_sample_packages(),
             status_message: "Welcome to ArchForge! Press ? for help".to_string(),
+            needs_redraw: true,
             ..Default::default()
         }
     }
 
+    /// Mark UI for redraw (optimization: avoid unnecessary renders)
+    fn mark_dirty(&mut self) {
+        self.needs_redraw = true;
+    }
+
+    /// Check if enough time has passed for next frame (optimization: cap FPS)
+    fn can_render(&self) -> bool {
+        self.last_render.elapsed() >= self.min_frame_interval
+    }
+
     /// Handle key events
     pub fn handle_key(&mut self, key: KeyEvent) -> bool {
+        self.mark_dirty();
+
         // Ctrl+C to quit
         if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
             return true;
@@ -135,23 +162,27 @@ impl App {
             KeyCode::Char('i') | KeyCode::Char('a') => {
                 self.insert_mode = true;
                 self.status_message = "INSERT MODE".to_string();
+                self.status_time = Instant::now();
             }
 
             // Command mode
             KeyCode::Char(':') => {
                 self.command_buffer.clear();
                 self.status_message = ":".to_string();
+                self.status_time = Instant::now();
             }
 
             // Search
             KeyCode::Char('/') => {
                 self.search_query.clear();
                 self.status_message = "/".to_string();
+                self.status_time = Instant::now();
             }
 
             // Help
             KeyCode::Char('?') => {
                 self.status_message = "HELP: h/j/k/l=navigate, i=insert, :=cmd, /=search, q=quit, ?=help".to_string();
+                self.status_time = Instant::now();
             }
 
             // Quit
@@ -178,6 +209,7 @@ impl App {
             KeyCode::Esc => {
                 self.insert_mode = false;
                 self.status_message = "NORMAL MODE".to_string();
+                self.status_time = Instant::now();
             }
             KeyCode::Backspace => {
                 self.command_buffer.pop();
@@ -218,9 +250,11 @@ impl App {
                         self.status_message = format!("Error writing: {}", e);
                     }
                 }
+                self.status_time = Instant::now();
             }
             "w" | "write" => {
                 self.status_message = "Usage: :w <filename>".to_string();
+                self.status_time = Instant::now();
             }
             "wq" | "x" => {
                 // Save and quit
@@ -240,6 +274,7 @@ impl App {
             }
             "help" | "h" => {
                 self.status_message = "Commands: :q=quit, :w <file>=save, :wq=save+quit, :gen <desc>=generate, :clear=clear".to_string();
+                self.status_time = Instant::now();
             }
             "gen" | "generate" => {
                 // :gen <description> - generate PKGBUILD
@@ -251,10 +286,12 @@ impl App {
                 } else {
                     self.status_message = "Usage: :gen <description>".to_string();
                 }
+                self.status_time = Instant::now();
             }
             "clear" => {
                 self.pkgbuild_content.clear();
                 self.status_message = "Cleared".to_string();
+                self.status_time = Instant::now();
             }
             "tab" => {
                 if parts.len() > 1 {
@@ -267,10 +304,12 @@ impl App {
                             self.status_message = "Invalid tab number (1-4)".to_string();
                         }
                     }
+                    self.status_time = Instant::now();
                 }
             }
             _ => {
                 self.status_message = format!("Unknown command: {}. Try :help", cmd);
+                self.status_time = Instant::now();
             }
         }
         self.status_time = Instant::now();
@@ -280,6 +319,7 @@ impl App {
     pub fn update_status(&mut self, msg: String) {
         self.status_message = msg;
         self.status_time = Instant::now();
+        self.mark_dirty();
     }
 
     /// Get age of current status message
@@ -338,13 +378,21 @@ pub fn run_tui() -> io::Result<()> {
 
     // Initial render
     terminal.draw(|f| ui(f, &app))?;
+    app.last_render = Instant::now();
 
     loop {
         // Check for events with timeout
         if event::poll(Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
                 let quit = app.handle_key(key);
-                terminal.draw(|f| ui(f, &app))?;
+                
+                // Optimization: only render if state changed and enough time passed
+                if app.needs_redraw && app.can_render() {
+                    terminal.draw(|f| ui(f, &app))?;
+                    app.last_render = Instant::now();
+                    app.needs_redraw = false;
+                }
+                
                 if quit || app.should_quit {
                     break;
                 }
@@ -354,6 +402,14 @@ pub fn run_tui() -> io::Result<()> {
         // Auto-clear status after 3 seconds
         if app.status_age() > Duration::from_secs(3) && !app.insert_mode {
             app.status_message = "Ready".to_string();
+            app.mark_dirty();
+        }
+
+        // Optimization: periodic render for status updates even without input
+        if app.needs_redraw && app.can_render() {
+            terminal.draw(|f| ui(f, &app))?;
+            app.last_render = Instant::now();
+            app.needs_redraw = false;
         }
     }
 
